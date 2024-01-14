@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Mutli authentication CRUD</title>
+	<link rel="stylesheet" type="text/css" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap" rel="stylesheet">
+</head>
+<body>
+	<div class="main">  	
+		<input type="checkbox" id="chk" aria-hidden="true">
+
+        <div class="signup">
+            <form id="signupForm" method="post">
+                <label for="chk" aria-hidden="true">Sign up</label>
+                <input type="text" id="username" name="username" placeholder="Username" autocomplete="off">
+                <span id="usernameError"></span>
+                <input type="email" id="email" name="email" placeholder="Email" autocomplete="off">
+                <span id="emailError"></span>
+                <input type="password" id="password" name="password" placeholder="Password" autocomplete="off">
+                <span id="passwordError"></span>
+                <select name="userType">
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <input type="submit" class="button" id="signUp" name="signup_submit" value="Sign Up">
+            </form>
+        </div>
+        
+        
+
+        <div class="login">
+            <form id="signinForm" method="post">
+                <label for="chk" aria-hidden="true">Login</label>
+                <input type="email" name="email" id="loginEmail" placeholder="Email" autocomplete="off">
+                <input type="password" name="password" id="loginPassword" placeholder="Password" autocomplete="off">
+                <button id="loginBtn">Login</button>
+            </form>
+        </div>
+	</div>
+    <!-- <script src="script.js"></script> -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-database.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-analytics.js";
+    import { getAuth, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+    import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+    
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+      
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+    apiKey: "AIzaSyDTVbGMaEjTCuATkPBWkSu9wvAmRJuMLuY",
+    authDomain: "multiauthcrud.firebaseapp.com",
+    databaseURL: "https://multiauthcrud-default-rtdb.firebaseio.com",
+    projectId: "multiauthcrud",
+    storageBucket: "multiauthcrud.appspot.com",
+    messagingSenderId: "150733518853",
+    appId: "1:150733518853:web:4b4c358f2d99d74d82c46c",
+    measurementId: "G-E5PBSJ5RET"
+        };
+      
+          // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    const analytics = getAnalytics(app);
+    const auth = getAuth();
+
+    // Check if the user is already logged in
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // User is signed in
+            const userId = user.uid;
+
+            // Get user data from the database
+            const userRef = ref(database, `users/${userId}`);
+            get(userRef).then((snapshot) => {
+                // Check if the snapshot exists and has a 'userType' property
+                const userType = snapshot.val() && snapshot.val().userType;
+
+                // Redirect based on user type
+                if (userType === 'admin') {
+                    window.location.href = 'dashboard.html';
+                } else {
+                    window.location.href = 'home.html';
+                }
+            });
+        }
+    });
+   // Modified to an async function
+   document.getElementById('signUp').addEventListener('click', async (e) => {
+        e.preventDefault(); // Prevent default form submission
+
+        // Get user input values
+        var email = document.getElementById('email').value;
+        var password = document.getElementById('password').value;
+        var username = document.getElementById('username').value;
+
+        console.log('User input values:', { email, password, username });
+
+        try {
+            // Validate and store user data in the Firebase database
+            // (Add your validation logic here)
+
+            // Create a new user
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+            // Get the user object
+            const user = userCredential.user;
+
+            console.log('User created in Firebase Authentication:', user);
+
+            // Store additional user data in the Firebase database
+            await set(ref(database, 'users/' + user.uid), {
+                email: email,
+                username: username,
+                userType: document.querySelector('select[name="userType"]').value
+            });
+
+            console.log('User data stored in Firebase Database successfully.');
+            alert('User Created!');
+        } catch (error) {
+            const errorCode = error.code;
+            const errorMessage = error.message;
+
+            console.error('Error:', errorCode, errorMessage);
+            alert(errorMessage);
+        }
+    });
+
+
+
+    document.getElementById('loginBtn').addEventListener('click', async (e) => {
+        e.preventDefault(); // Prevent default form submission
+
+        // Get user input values
+        var loginEmail = document.getElementById('loginEmail').value;
+        var loginPassword = document.getElementById('loginPassword').value;
+
+        console.log('User input values (login):', { loginEmail, loginPassword });
+
+        try {
+            // Sign in the user
+            const userCredential = await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+
+            // Get the signed-in user object
+            const user = userCredential.user;
+
+            console.log('User logged in:', user);
+
+            // Redirect based on user type
+            const snapshot = await get(ref(database, `users/${user.uid}`));
+            const userType = snapshot.val() && snapshot.val().userType;
+
+            if (userType === 'admin') {
+                window.location.href = 'dashboard.html';
+            } else {
+                window.location.href = 'home.html';
+            }
+        } catch (error) {
+            const errorCode = error.code;
+            const errorMessage = error.message;
+
+            console.error('Error:', errorCode, errorMessage);
+            alert(errorMessage);
+        }
+    });
+</script>
+        
+      
+</body>
+</html>
